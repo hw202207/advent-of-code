@@ -18,6 +18,7 @@ common warnings
 library
     import:           warnings
     exposed-modules:  Day1
+                    , Day2
     -- other-modules:
     -- other-extensions:
     build-depends:    base ^>=4.17.2.0
