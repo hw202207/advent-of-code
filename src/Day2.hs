@@ -11,9 +11,13 @@ import Data.Text qualified as T
 import Data.Text.IO qualified as T
 
 type Count = Int
+
 data CubeColor = Blue | Red | Green
-    deriving (Eq, Show)
-newtype Cube = Cube [(CubeColor, Count)]
+    deriving (Eq, Show, Ord)
+
+-- TODO: Given CubeColor is unique in each cube, better to create data type ?
+-- Cube { blue :: Maybe Int, green :: Maybe Int ,... }
+newtype Cube = Cube {unCube :: [(CubeColor, Count)]}
     deriving (Eq, Show)
 
 data Game = Game Int [Cube]
@@ -46,6 +50,10 @@ parseColor input = case input of
     "green" -> Green
     _ -> error $ T.unpack $ "unable to parse color string: " <> input
 
+-------------------------------------------------------------------------------
+--                                   part 1                                  --
+-------------------------------------------------------------------------------
+
 -- 12 red cubes, 13 green cubes, and 14 blue cube
 elfConfig :: Cube
 elfConfig =
@@ -62,12 +70,35 @@ isCubePossible (Cube inputCube) =
 isGamePossible :: Game -> Bool
 isGamePossible (Game _ cs) = all isCubePossible cs
 
-go :: IO ()
-go =
+go1 :: IO ()
+go1 =
     T.readFile "data/day2-input.txt"
         >>= print
         . sum
         . fmap (\(Game index _) -> index)
         . filter isGamePossible
         . fmap parseGame
+        . T.lines
+
+-------------------------------------------------------------------------------
+--                                   part 2                                  --
+-------------------------------------------------------------------------------
+
+calMinimalSet :: Game -> Cube
+calMinimalSet (Game _ cs) =
+    Cube
+        $ fmap (maximumBy (\a b -> snd a `compare` snd b))
+        $ groupBy (\a b -> fst a == fst b)
+        $ sortOn fst
+        $ concatMap unCube cs
+
+calPower :: Cube -> Int
+calPower (Cube cs) = product (fmap snd cs)
+
+go2 :: IO ()
+go2 =
+    T.readFile "data/day2-input.txt"
+        >>= print
+        . sum
+        . fmap (calPower . calMinimalSet . parseGame)
         . T.lines
