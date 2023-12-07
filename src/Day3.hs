@@ -35,8 +35,7 @@ findDigitsIndex :: Vector (Vector Char) -> [(Int, Int)]
 findDigitsIndex inputs =
     removeIndexesForSameNumber
         $ sort
-        $ filter
-            (\(i, j) -> checkCharOnPosition inputs (i, j) (not . isDot))
+        $ filter (checkCharOnPosition inputs (not . isDot))
         $ concat
         $ V.toList
         $ V.concat
@@ -77,8 +76,8 @@ findNumberAtIndexRight inputs (i, j) accum =
             Nothing -> accum
         Nothing -> accum
 
-checkCharOnPosition :: Vector (Vector Char) -> (Int, Int) -> (Char -> Bool) -> Bool
-checkCharOnPosition inputs (i, j) predFn =
+checkCharOnPosition :: Vector (Vector Char) -> (Char -> Bool) -> (Int, Int) -> Bool
+checkCharOnPosition inputs predFn (i, j) =
     case inputs !? i of
         Just row -> maybe False predFn (row !? j)
         Nothing -> False
@@ -130,8 +129,7 @@ findGearNumber inputs =
             ( findNumber inputs
                 . removeIndexesForSameNumber
                 . sort
-                . filter
-                    (\(i, j) -> checkCharOnPosition inputs (i, j) (not . isDot))
+                . filter (checkCharOnPosition inputs (not . isDot))
             )
         $ V.filter (not . null)
         $ V.concat
