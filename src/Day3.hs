@@ -1,9 +1,11 @@
 module Day3 where
 
+import Control.Monad
 import Data.Char (isDigit)
-import Data.List (nub, sort)
-import Data.Vector (Vector, (!), (!?))
+import Data.List (sort)
+import Data.Vector (Vector, (!?))
 import Data.Vector qualified as V
+import Test.Hspec
 
 go :: IO ()
 go =
@@ -13,22 +15,10 @@ go =
         . goInternal
         . lines
 
-goTest :: IO ()
-goTest = print $ goInternal testData
-
-testData :: [String]
-testData =
-    [ "467..114.."
-    , "...*......"
-    , "..35..633."
-    , "......#..."
-    , "617*......"
-    , ".....+.58."
-    , "..592....."
-    , "......755."
-    , "...$.*...."
-    , ".664.598.."
-    ]
+-- debug = do
+--     rawInputs <- lines <$> readFile "data/day3-input.txt"
+--     let inputs = V.fromList (fmap V.fromList rawInputs)
+--     writeFile "/tmp/2.txt" (unlines $ fmap show $ sort $ findNumber inputs $ findDigitsIndex inputs)
 
 goInternal :: [[Char]] -> Int
 goInternal rawInputs =
@@ -44,7 +34,8 @@ isDot = (== '.')
 -- | Find all indexs of Digits that are adjacent of symbol
 findDigitsIndex :: Vector (Vector Char) -> [(Int, Int)]
 findDigitsIndex inputs =
-    sort
+    removeIndexesForSameNumber
+        $ sort
         $ filter
             ( \(i, j) ->
                 case inputs !? i of
@@ -78,15 +69,23 @@ findDigitsIndex inputs =
             )
             inputs
 
+removeIndexesForSameNumber :: [(Int, Int)] -> [(Int, Int)]
+removeIndexesForSameNumber xs =
+    case xs of
+        [] -> []
+        [x] -> [x]
+        (x : y : rest) ->
+            [x | not (fst x == fst x && snd y - snd x == 1)]
+                ++ removeIndexesForSameNumber (y : rest)
+
 findNumber :: Vector (Vector Char) -> [(Int, Int)] -> [Int]
-findNumber inputs = nub . map (findNumberAroundIndex inputs)
+findNumber inputs = map (findNumberAroundIndex inputs)
 
 findNumberAroundIndex :: Vector (Vector Char) -> (Int, Int) -> Int
 findNumberAroundIndex inputs (i, j) =
     read
-        $ findNumberAtIndexLeft inputs (i, j - 1) []
-        ++ [(inputs ! i) ! j]
-        ++ findNumberAtIndexRight inputs (i, j + 1) []
+        $ findNumberAtIndexLeft inputs (i, j) []
+        ++ tail (findNumberAtIndexRight inputs (i, j) [])
 
 findNumberAtIndexLeft :: Vector (Vector Char) -> (Int, Int) -> [Char] -> [Char]
 findNumberAtIndexLeft inputs (i, j) accum =
@@ -103,3 +102,61 @@ findNumberAtIndexRight inputs (i, j) accum =
             Just el -> if isDigit el then findNumberAtIndexRight inputs (i, j + 1) (accum ++ [el]) else accum
             Nothing -> accum
         Nothing -> accum
+
+-------------------------------------------------------------------------------
+--                                    Test                                   --
+-------------------------------------------------------------------------------
+
+testMain :: IO ()
+testMain = hspec $ do
+    describe "Day3" $ do
+        let testDataWithIndex =
+                zipWith
+                    (\(a, b) i -> (a, b, i))
+                    testData
+                    ([1 ..] :: [Int])
+        forM_ testDataWithIndex $ \(inputs, expected, index) -> do
+            it (show index) $ do
+                goInternal inputs `shouldBe` expected
+
+testData :: [([String], Int)]
+testData =
+    [ (sampleData, 4361)
+    , (["*67..114.."], 67)
+    ,
+        (
+            [ "67...114.."
+            , "+........."
+            ]
+        , 67
+        )
+    ,
+        (
+            [ "&....114.."
+            , ".8........"
+            ]
+        , 8
+        )
+    ,
+        (
+            [ "&......8.."
+            , ".8.....+.."
+            ]
+        , 16
+        )
+    , (["..658.509*378.."], 887)
+    ]
+
+sampleData :: [String]
+sampleData =
+    [ "467..114.."
+    , "...*......"
+    , "..35..633."
+    , "......#..."
+    , "617*......"
+    , ".....+.58."
+    , "..592....."
+    , "......755."
+    , "...$.*...."
+    , ".664.598.."
+    ]
