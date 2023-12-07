@@ -36,37 +36,12 @@ findDigitsIndex inputs =
     removeIndexesForSameNumber
         $ sort
         $ filter
-            ( \(i, j) ->
-                case inputs !? i of
-                    Just row -> case row !? j of
-                        Just e -> not (isDot e)
-                        Nothing -> False
-                    Nothing -> False
-            )
+            (\(i, j) -> checkCharOnPosition inputs (i, j) (not . isDot))
         $ concat
         $ V.toList
         $ V.concat
         $ V.toList
-        $ V.imap
-            ( \i v ->
-                V.imap
-                    ( \j a ->
-                        if isSymbol a
-                            then
-                                [ (i - 1, j)
-                                , (i - 1, j - 1)
-                                , (i - 1, j + 1)
-                                , (i + 1, j)
-                                , (i + 1, j - 1)
-                                , (i + 1, j + 1)
-                                , (i, j - 1)
-                                , (i, j + 1)
-                                ]
-                            else []
-                    )
-                    v
-            )
-            inputs
+        $ findAdjectNumberIndexs isSymbol inputs
 
 removeIndexesForSameNumber :: [(Int, Int)] -> [(Int, Int)]
 removeIndexesForSameNumber xs =
@@ -102,6 +77,34 @@ findNumberAtIndexRight inputs (i, j) accum =
             Nothing -> accum
         Nothing -> accum
 
+checkCharOnPosition :: Vector (Vector Char) -> (Int, Int) -> (Char -> Bool) -> Bool
+checkCharOnPosition inputs (i, j) predFn =
+    case inputs !? i of
+        Just row -> maybe False predFn (row !? j)
+        Nothing -> False
+
+findAdjectNumberIndexs :: (t -> Bool) -> Vector (Vector t) -> Vector (Vector [(Int, Int)])
+findAdjectNumberIndexs predFn =
+    V.imap
+        ( \i v ->
+            V.imap
+                ( \j a ->
+                    if predFn a
+                        then
+                            [ (i - 1, j)
+                            , (i - 1, j - 1)
+                            , (i - 1, j + 1)
+                            , (i + 1, j)
+                            , (i + 1, j - 1)
+                            , (i + 1, j + 1)
+                            , (i, j - 1)
+                            , (i, j + 1)
+                            ]
+                        else []
+                )
+                v
+        )
+
 -------------------------------------------------------------------------------
 --                                   Part2                                   --
 -------------------------------------------------------------------------------
@@ -122,42 +125,18 @@ goInternal2 rawInputs =
 findGearNumber :: Vector (Vector Char) -> Vector [Int]
 findGearNumber inputs =
     V.map sort
-        $ V.filter (\xs -> length xs == 2)
+        $ V.filter ((== 2) . length)
         $ fmap
             ( findNumber inputs
                 . removeIndexesForSameNumber
                 . sort
                 . filter
-                    ( \(i, j) -> case inputs !? i of
-                        Just row -> case row !? j of
-                            Just e -> not (isDot e)
-                            Nothing -> False
-                        Nothing -> False
-                    )
+                    (\(i, j) -> checkCharOnPosition inputs (i, j) (not . isDot))
             )
         $ V.filter (not . null)
         $ V.concat
         $ V.toList
-        $ V.imap
-            ( \i v ->
-                V.imap
-                    ( \j a ->
-                        if a == '*'
-                            then
-                                [ (i - 1, j)
-                                , (i - 1, j - 1)
-                                , (i - 1, j + 1)
-                                , (i + 1, j)
-                                , (i + 1, j - 1)
-                                , (i + 1, j + 1)
-                                , (i, j - 1)
-                                , (i, j + 1)
-                                ]
-                            else []
-                    )
-                    v
-            )
-            inputs
+        $ findAdjectNumberIndexs (== '*') inputs
 
 -------------------------------------------------------------------------------
 --                                    Test                                   --
@@ -178,8 +157,27 @@ testMain = hspec $ do
 
 testData :: [([String], Int, Int)]
 testData =
-    [ (sampleData, 4361, 467835)
-    , (["*67..114.."], 67, 0)
+    [
+        (
+            [ "467..114.."
+            , "...*......"
+            , "..35..633."
+            , "......#..."
+            , "617*......"
+            , ".....+.58."
+            , "..592....."
+            , "......755."
+            , "...$.*...."
+            , ".664.598.."
+            ]
+        , 4361
+        , 467835
+        )
+    ,
+        ( ["*67..114.."]
+        , 67
+        , 0
+        )
     ,
         (
             [ "67...114.."
@@ -223,19 +221,9 @@ testData =
         , 609
         , 605
         )
-    , (["..658.509*378.."], 887, 192402)
-    ]
-
-sampleData :: [String]
-sampleData =
-    [ "467..114.."
-    , "...*......"
-    , "..35..633."
-    , "......#..."
-    , "617*......"
-    , ".....+.58."
-    , "..592....."
-    , "......755."
-    , "...$.*...."
-    , ".664.598.."
+    ,
+        ( ["..658.509*378.."]
+        , 887
+        , 192402
+        )
     ]
