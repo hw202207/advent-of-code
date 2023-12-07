@@ -19,10 +19,12 @@ library
     import:           warnings
     exposed-modules:  Day1
                     , Day2
+                    , Day3
     -- other-modules:
     -- other-extensions:
     build-depends:    base ^>=4.17.2.0
                     , text
+                    , vector
     hs-source-dirs:   src
     default-language: GHC2021
 
