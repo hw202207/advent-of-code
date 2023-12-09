@@ -28,6 +28,7 @@ calculatePoint card =
 calculateMatchNum :: Card -> Int
 calculateMatchNum Card{..} = length (winningNumbers `intersect` possessedNumbers)
 
+-- FIXME: try parser library
 parseLine :: Text -> Card
 parseLine input =
     let (cstr : numStr : _) = T.splitOn ":" input
@@ -66,7 +67,7 @@ calculateScratchCards inputs =
      in length (calScratchCard cards)
 
 -- the cards are already sorted base on input.txt
--- FIXME: algorithm is very slow. it takes 10seconds to calculate on day4 input data
+-- FIXME: algorithm is very slow. it takes 10 seconds to calculate on day4 input data
 calScratchCard :: [Card] -> [Card]
 calScratchCard [] = []
 calScratchCard [x] = [x]
