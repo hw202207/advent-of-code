@@ -162,21 +162,51 @@ findDestInConfig s Config{..} =
         then Just $ destRangeStart + (s - sourceRangeStart)
         else Nothing
 
+goInternalWithFile :: (String -> Int) -> IO ()
+goInternalWithFile fn =
+    readFile "data/day5-input.txt"
+        >>= print
+        . fn
+
+goInternal :: (Inputs -> Int) -> String -> Int
+goInternal fn inputs =
+    case parse parseInputs "" inputs of
+        Left err -> error (show err)
+        Right r -> fn r
+
 -------------------------------------------------------------------------------
 --                                   Part 1                                  --
 -------------------------------------------------------------------------------
 
 go1 :: IO ()
-go1 =
-    readFile "data/day5-input.txt"
-        >>= print
-        . goInternal
+go1 = goInternalWithFile goInternal1
 
-goInternal :: String -> Int
-goInternal inputs =
-    case parse parseInputs "" inputs of
-        Left err -> error (show err)
-        Right r -> minimum $ fmap (seedToLocation r) (seedsToPlant r)
+goInternal1 :: String -> Int
+goInternal1 = goInternal go1'
+  where
+    go1' :: Inputs -> Int
+    go1' r = minimum $ fmap (seedToLocation r) (seedsToPlant r)
+
+-------------------------------------------------------------------------------
+--                                   Part 2                                  --
+-------------------------------------------------------------------------------
+go2 :: IO ()
+go2 = goInternalWithFile goInternal2
+
+goInternal2 :: String -> Int
+goInternal2 = goInternal go2'
+  where
+    go2' :: Inputs -> Int
+    go2' r = minimum $ fmap (seedToLocation r) (seedsToSeeds $ seedsToPlant r)
+
+    seedsToSeeds :: [Int] -> [Int]
+    seedsToSeeds [] = []
+    seedsToSeeds [_] = error "seedsToSeeds error: data shall come as pairs"
+    seedsToSeeds (x : y : rest) =
+        seedRangeToSeeds x y ++ seedsToSeeds rest
+
+    seedRangeToSeeds :: Int -> Int -> [Int]
+    seedRangeToSeeds seed range = [seed + i | i <- [0 .. range - 1]]
 
 -------------------------------------------------------------------------------
 --                                    Test                                   --
@@ -194,7 +224,7 @@ testMain = do
                         ([1 ..] :: [Int])
             forM_ testDataWithIndex $ \(inputs, expected1, _expected2, index) -> do
                 it (show index) $ do
-                    goInternal inputs `shouldBe` expected1
+                    goInternal1 inputs `shouldBe` expected1
 
 testData :: [(String, Int, Int)]
 testData =
