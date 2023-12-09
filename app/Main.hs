@@ -25,3 +25,4 @@ main = do
   Day4.testMain
   putStrLn "= Day5"
   Day5.go1
+  Day5.testMain

@@ -2,12 +2,12 @@
 
 module Day5 where
 
-import Test.Hspec
+import Control.Monad
 import Data.Map.Lazy (Map)
 import Data.Map.Lazy qualified as Map
-import Control.Monad
-
--- import Debug.Trace
+import Data.Maybe
+import Debug.Trace
+import Test.Hspec
 import Text.Parsec
 import Text.Parsec.String (Parser)
 
@@ -106,12 +106,12 @@ inputsToMaps Inputs{..} =
         Map.fromList
             [(sourceRangeStart + i, destRangeStart + i) | i <- [0 .. rangeLength - 1]]
 
-seedToLocation ::
+seedToLocationWithMap ::
     AllMaps ->
     -- | Seed
     Int ->
     Int
-seedToLocation AllMaps{..} i =
+seedToLocationWithMap AllMaps{..} i =
     let soil = Map.findWithDefault i i seedToSoilMap
         fertilizer = Map.findWithDefault soil soil soilToFertilizerMap
         water = Map.findWithDefault fertilizer fertilizer fertilizerToWaterMap
@@ -120,6 +120,47 @@ seedToLocation AllMaps{..} i =
         humidity = Map.findWithDefault temperature temperature temperatureToHumidityMap
         location = Map.findWithDefault humidity humidity humidityToLocationMap
      in location
+
+seedToLocation :: Inputs -> Int -> Int
+seedToLocation Inputs{..} seed =
+    let soil = findDestInConfigs seed seedToSoilMapList
+        fertilizer = findDestInConfigs soil soilToFertilizerMapList
+        water = findDestInConfigs fertilizer fertilizerToWaterMapList
+        light = findDestInConfigs water waterToLightMapList
+        temperature = findDestInConfigs light lightToTemperatureMapList
+        humidity = findDestInConfigs temperature temperatureToHumidityMapList
+        location = findDestInConfigs humidity humidityToLocationMapList
+     in -- in trace
+        --        ( "Seed: "
+        --            ++ show seed
+        --            ++ ", soil: "
+        --            ++ show soil
+        --            ++ ", fertilizer: "
+        --            ++ show fertilizer
+        --            ++ ", water: "
+        --            ++ show water
+        --            ++ ", light: "
+        --            ++ show light
+        --            ++ ", temperature: "
+        --            ++ show temperature
+        --            ++ ", humidity: "
+        --            ++ show humidity
+        --            ++ ", location: "
+        --            ++ show location
+        --        )
+        location
+findDestInConfigs :: Int -> [Config] -> Int
+findDestInConfigs s configs =
+    let re = mapMaybe (findDestInConfig s) configs
+     in case re of
+            [r] -> r
+            _ -> s
+
+findDestInConfig :: Int -> Config -> Maybe Int
+findDestInConfig s Config{..} =
+    if s >= sourceRangeStart && s <= sourceRangeStart + rangeLength - 1
+        then Just $ destRangeStart + (s - sourceRangeStart)
+        else Nothing
 
 -------------------------------------------------------------------------------
 --                                   Part 1                                  --
@@ -135,29 +176,29 @@ goInternal :: String -> Int
 goInternal inputs =
     case parse parseInputs "" inputs of
         Left err -> error (show err)
-        Right r ->
-            let allMaps = inputsToMaps r
-             in minimum $ fmap (seedToLocation allMaps) (seedsToPlant r)
+        Right r -> minimum $ fmap (seedToLocation r) (seedsToPlant r)
 
 -------------------------------------------------------------------------------
 --                                    Test                                   --
 -------------------------------------------------------------------------------
 
 testMain :: IO ()
-testMain = hspec $ do
-    describe "Day5 Test" $ do
-        let testDataWithIndex =
-                zipWith
-                    (\(a, b, c) i -> (a, b, c, i))
-                    testData
-                    ([1 ..] :: [Int])
-        forM_ testDataWithIndex $ \(inputs, expected1, _expected2, index) -> do
-            it (show index) $ do
-                goInternal (unlines inputs) `shouldBe` expected1
+testMain = do
+    day5 <- readFile "data/day5-input.txt"
+    hspec $ do
+        describe "Day5 Test" $ do
+            let testDataWithIndex =
+                    zipWith
+                        (\(a, b, c) i -> (a, b, c, i))
+                        (testData ++ [(day5, 323142486, 0)])
+                        ([1 ..] :: [Int])
+            forM_ testDataWithIndex $ \(inputs, expected1, _expected2, index) -> do
+                it (show index) $ do
+                    goInternal inputs `shouldBe` expected1
 
-testData :: [([String], Int, Int)]
+testData :: [(String, Int, Int)]
 testData =
-    [ (sample, 35, 0) ]
+    [(unlines sample, 35, 0)]
 
 sample :: [String]
 sample =
