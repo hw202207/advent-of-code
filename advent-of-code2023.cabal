@@ -29,6 +29,8 @@ library
                     , vector
                     , hspec ^>= 2.11
                     , parsec
+                    , containers
+                    , pretty-simple ^>= 4.1.2
     hs-source-dirs:   src
     default-language: GHC2021
 
