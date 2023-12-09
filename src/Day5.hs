@@ -2,35 +2,50 @@
 
 module Day5 where
 
+-- import Debug.Trace
 import Text.Parsec
 import Text.Parsec.String (Parser)
 
 data Config = Config
-    { seeds :: [Int]
-    , seedToSoilMap :: [[Int]]
-    , soilToFertilizerMap :: [[Int]]
-    , fertilizerToWaterMap :: [[Int]]
-    , waterToLightMap :: [[Int]]
-    , lightToTemperatureMap :: [[Int]]
-    , temperatureToHumidityMap :: [[Int]]
-    , humidityToLocationMap :: [[Int]]
+    { destRangeStart :: Int
+    , sourceRangeStart :: Int
+    , rangeLength :: Int
+    }
+    deriving (Show)
+
+data Inputs = Inputs
+    { seedsToPlant :: [Int]
+    , seedToSoilMap :: [Config]
+    , soilToFertilizerMap :: [Config]
+    , fertilizerToWaterMap :: [Config]
+    , waterToLightMap :: [Config]
+    , lightToTemperatureMap :: [Config]
+    , temperatureToHumidityMap :: [Config]
+    , humidityToLocationMap :: [Config]
     }
     deriving (Show)
 
 -- Parse a list of integers
 parseIntList :: Parser [Int]
-parseIntList =
-    sepEndBy1 (read <$> many1 digit) spaces
+parseIntList = do
+    xs <- sepEndBy1 (read <$> many1 digit) (satisfy (== ' '))
+    _ <- newline
+    pure xs
 
 -- Parse a matrix of integers
-parseIntMatrix :: Parser [[Int]]
-parseIntMatrix = many1 parseIntList
+parseIntMatrix :: Parser [Config]
+parseIntMatrix = many1 $ do
+    config <- parseIntList
+    skipMany newline
+    case config of
+        [x, y, z] -> pure (Config x y z)
+        _ -> error "Fail to parse config line"
 
 -- Parse the entire configuration
-parseConfig :: Parser Config
-parseConfig = do
+parseInputs :: Parser Inputs
+parseInputs = do
     _ <- string "seeds:" >> spaces
-    seeds <- parseIntList
+    seedsToPlant <- parseIntList
     skipMany newline
 
     _ <- string "seed-to-soil map:" >> newline
@@ -54,14 +69,21 @@ parseConfig = do
     _ <- string "humidity-to-location map:" >> newline
     humidityToLocationMap <- parseIntMatrix
 
-    return Config{..}
+    return Inputs{..}
 
 go1 :: IO ()
 go1 = goInternal >>= print
 
-goInternal :: IO (Either ParseError Config)
+goInternal :: IO (Either ParseError Inputs)
 goInternal =
-    parse parseConfig "" <$> readFile "data/day5-input.txt"
+    parse parseInputs "" <$> readFile "data/day5-input.txt"
+
+-------------------------------------------------------------------------------
+--                                    Test                                   --
+-------------------------------------------------------------------------------
+
+testMain :: Either ParseError Inputs
+testMain = parse parseInputs "" (unlines sample)
 
 sample :: [String]
 sample =
