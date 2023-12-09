@@ -5,6 +5,7 @@ module Day4 where
 
 import Control.Monad
 import Data.List
+import Data.Maybe
 import Data.Text (Text)
 import Data.Text qualified as T
 import Debug.Trace
@@ -51,8 +52,7 @@ calculateTotalPoints = sum . fmap (calculatePoint . parseLine . T.pack)
 
 go1 :: IO ()
 go1 =
-    do
-        readFile "data/day4-input.txt"
+    readFile "data/day4-input.txt"
         >>= print
         . calculateTotalPoints
         . lines
@@ -62,31 +62,26 @@ go1 =
 -------------------------------------------------------------------------------
 
 calculateScratchCards :: [String] -> Int
-calculateScratchCards inputs =
-    let cards = fmap (parseLine . T.pack) inputs
-     in length (calScratchCard cards)
+calculateScratchCards = calInternal . fmap (parseLine . T.pack)
 
--- the cards are already sorted base on input.txt
--- FIXME: algorithm is very slow. it takes 10 seconds to calculate on day4 input data
-calScratchCard :: [Card] -> [Card]
+calInternal :: [Card] -> Int
+calInternal =
+    length
+        . calScratchCard
+        . fmap (\c -> (cardIndex c, calculateMatchNum c))
+
+-- (CardIndex, MatchNum)
+calScratchCard :: [(Int, Int)] -> [(Int, Int)]
 calScratchCard [] = []
 calScratchCard [x] = [x]
-calScratchCard (x : xss) =
-    let point = calculateMatchNum x
-        xs = takeWhile (== x) xss
-        rest = dropWhile (== x) xss
-     in if point >= 1
-            then
-                let allIndexes = [cardIndex x + i | i <- [1 .. point]]
-                    ys = concat $ replicate (length $ x:xs) $ nub $ takeWhile (\c -> cardIndex c `elem` allIndexes) rest
-                 in -- trace ("\tDEBUG: " ++ show point ++ "\n\tx: " ++ show x ++ ": " ++ show (fmap cardIndex xs ) ++ "\n\tys: " ++ show (take 40 $ fmap cardIndex ys) ++ "\n\trest: " ++ show (take 40 $ fmap cardIndex rest)) $
-                    x : xs ++  calScratchCard (sort (ys ++ rest))
-            else x : xs ++ calScratchCard rest
+calScratchCard (x : rest) =
+    let (cindex, point) = x
+        ys = mapMaybe (\j -> find ((== j) . fst) rest) [cindex + i | i <- [1 .. point]]
+     in x : calScratchCard (ys ++ rest)
 
 go2 :: IO ()
 go2 =
-    do
-        readFile "data/day4-input.txt"
+    readFile "data/day4-input.txt"
         >>= print
         . calculateScratchCards
         . lines
@@ -99,7 +94,7 @@ testMain :: IO ()
 testMain = do
     day4Input <- lines <$> readFile "data/day4-input.txt"
     hspec $ do
-        describe "Day4" $ do
+        describe "Day4 Test" $ do
             let testDataWithIndex =
                     zipWith
                         (\(a, b, c) i -> (a, b, c, i))

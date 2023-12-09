@@ -16,9 +16,6 @@ goInternal calFn =
         . map calFn
         . T.lines
 
-go :: IO ()
-go = go1 >> go2
-
 go1 :: IO ()
 go1 = goInternal calibrateStr
 
@@ -31,7 +28,7 @@ calibrateStr str =
      in case T.length xs of
             0 -> 0
             1 -> read $ T.unpack $ xs <> xs
-            _ -> read (T.head xs : T.last xs : [])
+            _ -> read [T.head xs, T.last xs]
 
 numberStrToNumber :: Text -> Text
 numberStrToNumber input
@@ -65,13 +62,14 @@ test2 :: IO ()
 test2 =
     print
         $ sum
-        $ map (calibrateStr . numberStrToNumber)
-        $ [ "two1nine"
-          , "eightwothree"
-          , "abcone2threexyz"
-          , "xtwone3four"
-          , "4nineeightseven2"
-          , "zoneight234"
-          , "7pqrstsixteen"
-          , "3onefqltjzdrfourcpkfhceightwomc" -- shall be 32
-          ]
+        $ map
+            (calibrateStr . numberStrToNumber)
+            [ "two1nine"
+            , "eightwothree"
+            , "abcone2threexyz"
+            , "xtwone3four"
+            , "4nineeightseven2"
+            , "zoneight234"
+            , "7pqrstsixteen"
+            , "3onefqltjzdrfourcpkfhceightwomc" -- shall be 32
+            ]

@@ -142,7 +142,7 @@ findGearNumber inputs =
 
 testMain :: IO ()
 testMain = hspec $ do
-    describe "Day3" $ do
+    describe "Day3 Test" $ do
         let testDataWithIndex =
                 zipWith
                     (\(a, b, c) i -> (a, b, c, i))
