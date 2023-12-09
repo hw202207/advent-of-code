@@ -6,10 +6,9 @@ module Day4 where
 import Control.Monad
 import Data.List
 import Data.Maybe
-import Data.Text (Text)
-import Data.Text qualified as T
-import Debug.Trace
 import Test.Hspec
+import Text.Parsec
+import Text.Parsec.String (Parser)
 
 data Card = Card
     { cardIndex :: Int
@@ -29,26 +28,37 @@ calculatePoint card =
 calculateMatchNum :: Card -> Int
 calculateMatchNum Card{..} = length (winningNumbers `intersect` possessedNumbers)
 
--- FIXME: try parser library
-parseLine :: Text -> Card
+parseLine :: String -> Card
 parseLine input =
-    let (cstr : numStr : _) = T.splitOn ":" input
-        (_ : istr : _) = T.words cstr
-        (winStr : posStr : _) = T.splitOn "|" numStr
-        winNumStr = T.words winStr
-        posNumStr = T.words posStr
-     in Card
-            { cardIndex = read (T.unpack istr)
-            , winningNumbers = fmap (read . T.unpack) winNumStr
-            , possessedNumbers = fmap (read . T.unpack) posNumStr
-            }
+    case parse lineParser "" input of
+        Left err -> error (show err)
+        Right c -> c
+
+lineParser :: Parser Card
+lineParser = do
+    _ <- string "Card"
+    skipMany1 isRealSpace
+    cardIndex <- read <$> many1 digit
+    _ <- char ':'
+    skipMany1 isRealSpace
+    winningNumbers <- parseIntList
+    _ <- char '|'
+    skipMany1 isRealSpace
+    possessedNumbers <- parseIntList
+    pure (Card{..})
+  where
+    isRealSpace :: Parser Char
+    isRealSpace = satisfy (== ' ')
+
+    parseIntList :: Parser [Int]
+    parseIntList = sepEndBy1 (read <$> many1 digit) (many1 isRealSpace)
 
 -------------------------------------------------------------------------------
 --                                   Part 1                                  --
 -------------------------------------------------------------------------------
 
 calculateTotalPoints :: [String] -> Int
-calculateTotalPoints = sum . fmap (calculatePoint . parseLine . T.pack)
+calculateTotalPoints = sum . fmap (calculatePoint . parseLine)
 
 go1 :: IO ()
 go1 =
@@ -62,7 +72,7 @@ go1 =
 -------------------------------------------------------------------------------
 
 calculateScratchCards :: [String] -> Int
-calculateScratchCards = calInternal . fmap (parseLine . T.pack)
+calculateScratchCards = calInternal . fmap parseLine
 
 calInternal :: [Card] -> Int
 calInternal =
