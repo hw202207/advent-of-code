@@ -1,8 +1,8 @@
 module Main where
 
-import qualified Day1
+import qualified Day4
 
 main :: IO ()
 main = do
   putStrLn "Hello, Advent of code 2023!"
-  Day1.go2
+  Day4.go2
