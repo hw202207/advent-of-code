@@ -6,7 +6,6 @@ import Control.Monad
 import Data.Map.Lazy (Map)
 import Data.Map.Lazy qualified as Map
 import Data.Maybe
-import Debug.Trace
 import Test.Hspec
 import Text.Parsec
 import Text.Parsec.String (Parser)
