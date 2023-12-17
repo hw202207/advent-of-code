@@ -135,7 +135,7 @@ go2 = goInternalWithFile run2
 testMain :: IO ()
 testMain = do
     hspec $ do
-        describe "Day5 Test" $ do
+        describe "Day15 Test" $ do
             let testDataWithIndex =
                     zipWith
                         (\(a, b, c) i -> (a, b, c, i))
