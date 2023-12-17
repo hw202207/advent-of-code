@@ -4,8 +4,9 @@ module Day15 where
 
 import Control.Monad
 import Data.Char
-import Data.Function
 import Data.List
+import Data.Map (Map)
+import Data.Map qualified as M
 import Data.Text (Text)
 import Data.Text qualified as T
 import Data.Text.IO qualified as T
@@ -13,7 +14,7 @@ import Test.Hspec
 import Text.Parsec
 import Text.Parsec.String (Parser)
 
--- import Debug.Trace
+import Debug.Trace
 
 goInternalWithFile :: (Text -> Int) -> IO ()
 goInternalWithFile fn =
@@ -22,11 +23,12 @@ goInternalWithFile fn =
             . fn
 
 hash :: Text -> Int
-hash = T.foldl' hashInternal 0
-
-hashInternal :: Int -> Char -> Int
-hashInternal initVal c =
-    (ord c + initVal) * 17 `rem` 256
+hash =
+    T.foldl' hashInternal 0
+  where
+    hashInternal :: Int -> Char -> Int
+    hashInternal initVal c =
+        (ord c + initVal) * 17 `rem` 256
 
 -------------------------------------------------------------------------------
 --                                   Part 1                                  --
@@ -40,7 +42,7 @@ run1 =
     sum
         . fmap hash
         . T.splitOn ","
-        . T.init -- ignore line break
+        . T.takeWhile (/= '\n')
 
 -------------------------------------------------------------------------------
 --                                   Part 2                                  --
@@ -48,26 +50,32 @@ run1 =
 
 type Label = Text
 type FocalLength = Int
-data Printer = Remove Label | Add Label FocalLength
+data Lens = Remove Label | Add Label FocalLength
     deriving (Show)
 
-printerHasSameLabel :: Printer -> Printer -> Bool
+printerHasSameLabel :: Lens -> Lens -> Bool
 printerHasSameLabel (Remove l1) (Remove l2) = l1 == l2
 printerHasSameLabel (Remove l1) (Add l2 _) = l1 == l2
 printerHasSameLabel (Add l1 _) (Remove l2) = l1 == l2
 printerHasSameLabel (Add l1 _) (Add l2 _) = l1 == l2
 
-boxNumber :: Printer -> Int
-boxNumber (Remove l1) = hash l1
-boxNumber (Add l1 _) = hash l1
+defMap :: Map Int [Lens]
+defMap = M.fromList $ [(i, []) | i <- [1 .. 256]]
 
-parseSingle :: Text -> Printer
+boxNumber :: Lens -> Int
+boxNumber (Remove l1) = hash l1 + 1
+boxNumber (Add l1 _) = hash l1 + 1
+
+addBoxNumber :: Lens -> (Int, Lens)
+addBoxNumber p = (boxNumber p, p)
+
+parseSingle :: Text -> Lens
 parseSingle input =
     case parse printerParser "" (T.unpack input) of
         Left err -> error (show err)
         Right r -> r
 
-printerParser :: Parser Printer
+printerParser :: Parser Lens
 printerParser = try parseRemoveOp <|> parseAddOp
   where
     parseRemoveOp = do
@@ -83,21 +91,27 @@ printerParser = try parseRemoveOp <|> parseAddOp
 run2 :: Text -> Int
 run2 =
     sum
-        . concatMap calculateFocalLength
-        . fmap (\xs -> (fst $ head xs, printOnBoxes $ fmap snd xs))
-        . groupBy ((==) `on` fst)
-        . sortBy (compare `on` fst)
-        . fmap (\p -> (boxNumber p, p))
-        . fmap parseSingle
+        . concat
+        . M.elems
+        . M.mapWithKey calculateFocalLength
+        . (\m -> trace (show $ M.take 2 m) m)
+        . M.map printOnBoxes
+        . (\m -> trace (show $ M.take 2 m) m)
+        . foldl' pushToMap defMap
+        . fmap (addBoxNumber . parseSingle)
         . T.splitOn ","
-        . T.init -- ignore line break
+        . T.takeWhile (/= '\n')
+
+pushToMap :: Map Int [Lens] -> (Int, Lens) -> Map Int [Lens]
+pushToMap m1 (boxNum, printer) = M.update (\xs -> Just (xs ++ [printer])) boxNum m1
 
 -- do computation for list of printer on same box
-printOnBoxes :: [Printer] -> [Printer]
+printOnBoxes :: [Lens] -> [Lens]
 printOnBoxes = foldl' go []
   where
-    go :: [Printer] -> Printer -> [Printer]
-    go [] p = [p]
+    go :: [Lens] -> Lens -> [Lens]
+    go [] (Remove _) = []
+    go [] p@(Add _ _) = [p]
     go (x : rest) p =
         if printerHasSameLabel p x
             then case p of
@@ -105,10 +119,10 @@ printOnBoxes = foldl' go []
                 Add _ _ -> p : rest
             else x : go rest p
 
-calculateFocalLength :: (Int, [Printer]) -> [Int]
-calculateFocalLength (boxNum, xs) = uncurry calc <$> zip xs [1 ..]
+calculateFocalLength :: Int -> [Lens] -> [Int]
+calculateFocalLength boxNum xs = uncurry calc <$> zip xs [1 ..]
   where
-    calc (Add _ f) index = (boxNum + 1) * f * index
+    calc (Add _ f) index = boxNum * f * index
     calc (Remove _) _ = 0
 
 go2 :: IO ()
@@ -135,7 +149,12 @@ testMain = do
 testData :: [(Text, Int, Int)]
 testData =
     [ (sample, 1320, 145)
+    , (sample2, 2927, 138)
     ]
 
 sample :: Text
 sample = "rn=1,cm-,qp=3,cm=2,qp-,pc=4,ot=9,ab=5,pc-,pc=6,ot=7\n"
+
+sample2 :: Text
+sample2 =
+    "fntz-,pr-,cxmnl-,pr-,jvb=7,jvb-,rfj-,jvb-,fntz=9,cxmnl-,fntz-,rfj-,fntz-,fntz-,cxmnl-,jvb=7,rfj=3,cxmnl-,rfj-,jvb=2,jvb-,jvb=1,jvb=5,jvb-,pr-,rfj=1,cxmnl=3,fntz=6,fntz-,cxmnl-,cxmnl=2,cxmnl-,jvb=3,pr=9,jvb=9,fntz-"
